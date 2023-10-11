@@ -32,6 +32,7 @@ jobs:
         options: --privileged
   
       steps:
+        - uses: AutoModality/action-clean@v1
         - name: Setup variables
           id: vars
           run: |
