@@ -58,12 +58,11 @@ jobs:
         - name: Build ISO
           working-directory: vyos-build
           run: |
-            sudo make clean
             sudo ./build-vyos-image iso \
-                --architecture ${{ env.vyos_arch }} \
-                --build-by ${{ env.vyos_build_by }} \
-                --build-type ${{ env.vyos_build_type }} \
-                --version ${{ env.vyos_version }} \
+                --architecture "${{ env.vyos_arch }}" \
+                --build-by "${{ env.vyos_build_by }}" \
+                --build-type "${{ env.vyos_build_type }}" \
+                --version "${{ env.vyos_version }}" \
                 --build-comment "VyOS with additional packages" \
                 --custom-package "git" \
                 --custom-package "iptables" \
