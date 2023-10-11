@@ -11,8 +11,12 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  version: 1.5-rolling
-  branch: current
+  vyos_url: https://github.com/vyos/vyos-build
+  vyos_arch: amd64
+  vyos_version: 1.5-rolling
+  vyos_branch: current
+  vyos_build_type: release
+  vyos_build_by: "Michael Edelman"
 
 
 jobs:
@@ -23,7 +27,7 @@ jobs:
         contents: write
   
       container:
-        image: vyos/vyos-build:equuleus
+        image: "vyos/vyos-build:current"
         volumes:
           - /proc:/proc
         options: --privileged
@@ -36,18 +40,22 @@ jobs:
             if [[ ${{ startsWith(github.ref, 'refs/tags/') }} == 'true' ]]; then 
               echo "version=${{ github.ref_name }}" >>$GITHUB_ENV
             else
-              echo "version=${{ env.version }}-dev-$(echo ${{ github.sha }} | cut -c 1-8)" >>$GITHUB_ENV
+              echo "version=${{ env.vyos_version }}-dev-$(echo ${{ github.sha }} | cut -c 1-8)" >>$GITHUB_ENV
             fi
   
         - name: Executing scripts
           run: find scripts -name '*.sh' -exec bash {} \;
   
         - name: Clone Repository
-          run: git clone -b ${{ env.branch }} --single-branch --depth 1 https://github.com/vyos/vyos-build.git
+          run: git clone -b ${{ env.vyos_branch }} --single-branch --depth 1 https://github.com/vyos/vyos-build.git
   
         - name: Configure
           working-directory: vyos-build
-          run: ./configure --architecture amd64 --build-by "https://github.com/os-builds" --build-type release --version ${{ env.version }}
+          run: |
+            ./configure --architecture ${{env.vyos_arch}} \
+                --build-by ${{env.vyos_build_by}} \
+                --build-type ${{env.vyos_build_type}} \
+                --version ${{ env.vyos_version }}
   
         - name: Prepare custom packages
           run: |
@@ -57,27 +65,40 @@ jobs:
   
         - name: Build ISO
           working-directory: vyos-build
-          run: sudo make iso
+          run: |
+            sudo make clean
+            sudo ./build-vyos-image iso \
+                --architecture ${{ env.vyos_arch }} \
+                --build-by ${{ env.vyos_build_by }} \
+                --build-type ${{ env.vyos_build_type }} \
+                --build-comment "VyOS with additional packages" \
+                --custom-package "git" \
+                --custom-package "iptables" \
+                --custom-package "jo" \
+                --custom-package "jq" \
+                --custom-package "moreutils" \
+                --custom-package "python3-venv" \
+                --custom-package "tree"
   
         - name: Rename ISO
-          run: mv vyos-build/build/live-image-amd64.hybrid.iso vyos-${{ env.version }}.iso
+          run: mv vyos-build/build/live-image-amd64.hybrid.iso vyos-${{ env.vyos_version }}.iso
   
         - uses: actions/upload-artifact@v3
           with:
-            name: vyos-${{ env.version }}
-            path: vyos-${{ env.version }}.iso
+            name: vyos-${{ env.vyos_version }}
+            path: vyos-${{ env.vyos_version }}.iso
   
         - name: Checksums
           id: checksums
           run: |
-            echo "md5sum=$(md5sum vyos-${{ env.version }}.iso | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
-            echo "sha256sum=$(sha256sum vyos-${{ env.version }}.iso | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
-            echo "sha512sum=$(sha512sum vyos-${{ env.version }}.iso | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+            echo "md5sum=$(md5sum vyos-${{ env.vyos_version }}.iso | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+            echo "sha256sum=$(sha256sum vyos-${{ env.vyos_version }}.iso | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+            echo "sha512sum=$(sha512sum vyos-${{ env.vyos_version }}.iso | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
   
         - uses: crazy-max/ghaction-github-release@v2
           if: startsWith(github.ref, 'refs/tags/')
           with:
-            files: vyos-${{ env.version }}.iso
+            files: vyos-${{ env.vyos_version }}.iso
             body: |
               | Digest | Checksum |
               |--------|----------|
