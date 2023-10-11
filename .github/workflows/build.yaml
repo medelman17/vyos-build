@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  schedule:
+    - cron: '00 04 * * *'
+  push:
+    branches: ["main"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  version: 1.5-rolling
+  branch: current
+
+
+jobs:
+    build:
+      runs-on: ubuntu-latest
+  
+      permissions:
+        contents: write
+  
+      container:
+        image: vyos/vyos-build:equuleus
+        volumes:
+          - /proc:/proc
+        options: --privileged
+  
+      steps:
+        - uses: actions/checkout@v4
+  
+        - name: Generate Version
+          run: |
+            if [[ ${{ startsWith(github.ref, 'refs/tags/') }} == 'true' ]]; then 
+              echo "version=${{ github.ref_name }}" >>$GITHUB_ENV
+            else
+              echo "version=${{ env.version }}-dev-$(echo ${{ github.sha }} | cut -c 1-8)" >>$GITHUB_ENV
+            fi
+  
+        - name: Executing scripts
+          run: find scripts -name '*.sh' -exec bash {} \;
+  
+        - name: Clone Repository
+          run: git clone -b ${{ env.branch }} --single-branch --depth 1 https://github.com/vyos/vyos-build.git
+  
+        - name: Configure
+          working-directory: vyos-build
+          run: ./configure --architecture amd64 --build-by "https://github.com/os-builds" --build-type release --version ${{ env.version }}
+  
+        - name: Prepare custom packages
+          run: |
+            for deb in $(cat packages.txt); do
+              mv ${deb} vyos-build/packages/
+            done
+  
+        - name: Build ISO
+          working-directory: vyos-build
+          run: sudo make iso
+  
+        - name: Rename ISO
+          run: mv vyos-build/build/live-image-amd64.hybrid.iso vyos-${{ env.version }}.iso
+  
+        - uses: actions/upload-artifact@v3
+          with:
+            name: vyos-${{ env.version }}
+            path: vyos-${{ env.version }}.iso
+  
+        - name: Checksums
+          id: checksums
+          run: |
+            echo "md5sum=$(md5sum vyos-${{ env.version }}.iso | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+            echo "sha256sum=$(sha256sum vyos-${{ env.version }}.iso | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+            echo "sha512sum=$(sha512sum vyos-${{ env.version }}.iso | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+  
+        - uses: crazy-max/ghaction-github-release@v2
+          if: startsWith(github.ref, 'refs/tags/')
+          with:
+            files: vyos-${{ env.version }}.iso
+            body: |
+              | Digest | Checksum |
+              |--------|----------|
+              | md5    | `${{ steps.checksums.outputs.md5sum }}` |
+              | sha256 | `${{ steps.checksums.outputs.sha256sum }}` |
+              | sha512 | `${{ steps.checksums.outputs.sha512sum }}` |
+            append_body: true
