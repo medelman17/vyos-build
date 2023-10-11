@@ -86,7 +86,6 @@ jobs:
                 --custom-package "python3-venv" \
                 --custom-package "tree" \
                 --custom-package "golang" \
-                --custom-package "ovftool" \
                 --custom-package "nano" \
                 --custom-package "dnsutils"
 
