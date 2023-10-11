@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: '00 04 * * *'
   push:
@@ -28,13 +29,26 @@ jobs:
   
       container:
         image: "vyos/vyos-build:current"
-        volumes:
-          - /proc:/proc
         options: --privileged
   
       steps:
+        - name: Setup variables
+          id: vars
+          run: |
+            build_date=$(date +%Y%m%d%H%M)
+            echo "tag-name=${{ env.vyos_version }}-${build_date}" >> "$GITHUB_OUTPUT"
+            echo "iso-name=${{ env.vyos_version }}-${build_date}-${{ env.vyos_arch }}" >> "$GITHUB_OUTPUT"
+
         - uses: actions/checkout@v4
-  
+
+        - name: Download `sops` deb
+          uses: robinraju/release-downloader@v1.8
+          with:
+            repository: mozilla/sops
+            latest: true 
+            fileName: "*amd64.deb"
+            out-file-path: vyos-build/packages
+
         - name: Generate Version
           run: |
             if [[ ${{ startsWith(github.ref, 'refs/tags/') }} == 'true' ]]; then 
@@ -62,7 +76,7 @@ jobs:
                 --architecture "${{ env.vyos_arch }}" \
                 --build-by "${{ env.vyos_build_by }}" \
                 --build-type "${{ env.vyos_build_type }}" \
-                --version "${{ env.vyos_version }}" \
+                --version "${{ steps.vars.outputs.tag-name }}" \
                 --build-comment "VyOS with additional packages" \
                 --custom-package "git" \
                 --custom-package "iptables" \
