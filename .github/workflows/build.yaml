@@ -48,15 +48,7 @@ jobs:
   
         - name: Clone Repository
           run: git clone -b ${{ env.vyos_branch }} --single-branch --depth 1 https://github.com/vyos/vyos-build.git
-  
-        - name: Configure
-          working-directory: vyos-build
-          run: |
-            ./configure --architecture ${{env.vyos_arch}} \
-                --build-by ${{env.vyos_build_by}} \
-                --build-type ${{env.vyos_build_type}} \
-                --version ${{ env.vyos_version }}
-  
+              
         - name: Prepare custom packages
           run: |
             for deb in $(cat packages.txt); do
@@ -71,6 +63,7 @@ jobs:
                 --architecture ${{ env.vyos_arch }} \
                 --build-by ${{ env.vyos_build_by }} \
                 --build-type ${{ env.vyos_build_type }} \
+                --version ${{ env.vyos_version }} \
                 --build-comment "VyOS with additional packages" \
                 --custom-package "git" \
                 --custom-package "iptables" \
