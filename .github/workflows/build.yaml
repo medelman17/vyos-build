@@ -32,7 +32,6 @@ jobs:
         options: --privileged
   
       steps:
-        - uses: AutoModality/action-clean@v1
         - name: Setup variables
           id: vars
           run: |
@@ -41,14 +40,6 @@ jobs:
             echo "iso-name=${{ env.vyos_version }}-${build_date}-${{ env.vyos_arch }}" >> "$GITHUB_OUTPUT"
 
         - uses: actions/checkout@v4
-
-        - name: Download `sops` deb
-          uses: robinraju/release-downloader@v1.8
-          with:
-            repository: mozilla/sops
-            latest: true 
-            fileName: "*amd64.deb"
-            out-file-path: vyos-build/packages
 
         - name: Generate Version
           run: |
@@ -63,6 +54,14 @@ jobs:
   
         - name: Clone Repository
           run: git clone -b ${{ env.vyos_branch }} --single-branch --depth 1 https://github.com/vyos/vyos-build.git
+
+        - name: Download `sops` deb
+          uses: robinraju/release-downloader@v1.8
+          with:
+            repository: mozilla/sops
+            latest: true 
+            fileName: "*amd64.deb"
+            out-file-path: vyos-build/packages
               
         - name: Prepare custom packages
           run: |
