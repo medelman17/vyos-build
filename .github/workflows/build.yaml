@@ -84,27 +84,32 @@ jobs:
                 --custom-package "jq" \
                 --custom-package "moreutils" \
                 --custom-package "python3-venv" \
-                --custom-package "tree"
+                --custom-package "tree" \
+                --custom-package "golang" \
+                --custom-package "ovftool" \
+                --custom-package "nano" \
+                --custom-package "dnsutils"
+
   
         - name: Rename ISO
-          run: mv vyos-build/build/live-image-amd64.hybrid.iso vyos-${{ env.vyos_version }}.iso
+          run: mv vyos-build/build/live-image-amd64.hybrid.iso vyos-${{ steps.vars.outputs.tag-name }}.iso
   
         - uses: actions/upload-artifact@v3
           with:
-            name: vyos-${{ env.vyos_version }}
-            path: vyos-${{ env.vyos_version }}.iso
+            name: vyos-${{ steps.vars.outputs.tag-name }}
+            path: vyos-${{ steps.vars.outputs.tag-name }}.iso
   
         - name: Checksums
           id: checksums
           run: |
-            echo "md5sum=$(md5sum vyos-${{ env.vyos_version }}.iso | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
-            echo "sha256sum=$(sha256sum vyos-${{ env.vyos_version }}.iso | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
-            echo "sha512sum=$(sha512sum vyos-${{ env.vyos_version }}.iso | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+            echo "md5sum=$(md5sum vyos-${{ steps.vars.outputs.tag-name }}.iso | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+            echo "sha256sum=$(sha256sum vyos-${{ steps.vars.outputs.tag-name }}.iso | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+            echo "sha512sum=$(sha512sum vyos-${{ steps.vars.outputs.tag-name }}.iso | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
   
         - uses: crazy-max/ghaction-github-release@v2
           if: startsWith(github.ref, 'refs/tags/')
           with:
-            files: vyos-${{ env.vyos_version }}.iso
+            files: vyos-${{ steps.vars.outputs.tag-name }}.iso
             body: |
               | Digest | Checksum |
               |--------|----------|
