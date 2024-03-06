@@ -86,6 +86,7 @@ jobs:
                 --build-type "${{ env.vyos_build_type }}" \
                 --version "${{ steps.vars.outputs.tag-name }}" \
                 --build-comment "VyOS with additional packages" \
+                --custom-package "cloudflared" \
                 --custom-package "git" \
                 --custom-package "iptables" \
                 --custom-package "jo" \
