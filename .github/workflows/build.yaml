@@ -80,7 +80,7 @@ jobs:
         - name: Build ISO
           working-directory: vyos-build
           run: |
-            sudo ./build-vyos-image iso \
+            sudo ./build-vyos-image generic \
                 --architecture "${{ env.vyos_arch }}" \
                 --build-by "${{ env.vyos_build_by }}" \
                 --build-type "${{ env.vyos_build_type }}" \
